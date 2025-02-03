@@ -22,26 +22,7 @@ def evaluation(model_name, victim_backdoor_model, victim_clean_model, posion_tes
     return CAD, ASR, accuracy
 
 def calculate_accuracy(model_name,clean_hg,target_type, victim_clean_model,clean_labels, posion_testset_index):
-    """
-    计算在正常情况下的准确率。
-
-    参数:
-    pred_clean: 预测结果的张量
-    clean_labels: 真实标签的张量
-    testset_index: 测试集的索引
-
-    返回:
-    准确率(float)
-    """
     logits =  victim_clean_model.evaluate(clean_hg)
-    # if model_name == 'HGT':
-    #     logits= victim_clean_model(clean_hg,target_type)
-    # elif model_name == 'RGCN':
-    #     logits = victim_clean_model(clean_hg, clean_hg.ndata['inp'])
-    # elif model_name == 'HAN':
-    #     logits = victim_clean_model(clean_hg, clean_hg.ndata['inp'][target_type])
-    # else:
-    #     raise NotImplementedError
     pred = logits.argmax(1).cpu()
     accuracy = (pred[posion_testset_index] == clean_labels[posion_testset_index]).float().mean().item()
     print("Under Normal Circumstances, accuracy is", accuracy)
