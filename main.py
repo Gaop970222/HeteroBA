@@ -15,9 +15,7 @@ os.environ["DGLBACKEND"] = "pytorch"
 os.environ["DGL_NUM_WORKER_THREADS"] = "1"
 
 import dgl
-#--------debug import--------
-from test_func import *
-#--------debug import--------
+
 #-------------------------------------------------General Parameters-------------------------------------------------------
 parser = argparse.ArgumentParser(description="Parameters")
 parser.add_argument("--random_seed", type = int, help = "random seed", default = 999)
@@ -26,7 +24,7 @@ parser.add_argument("--model_name", help="model_name choice", default="HAN", cho
 parser.add_argument("--target_class", type = int, default = 2, help="The target class of backdoor attack")
 parser.add_argument("--chosen_poison_nodes_method", type = str, default = 'degree', help='the method of choosing poison node, backup: [degree, random, pagerank, cluster]')
 parser.add_argument("--chosen_influential_nodes_method", type = str, default = 'cluster', help = 'the method of choosing influential node which connect to trigger nodes, backup: [degree, llm, random, pagerank,cluster]')
-parser.add_argument("--trigger_type", type = str, default = 'actor', help = 'the trigger type') # 后期 可能会改变成自动选择 现在先是手动选择
+parser.add_argument("--trigger_type", type = str, default = 'actor', help = 'the trigger type') 
 parser.add_argument("--poison_set_ratio", type = float, default = 0.1)
 parser.add_argument("--training", type = bool, default = True, help = "whether in a train phase")
 parser.add_argument("--backdoor_type", type = str, default = 'HeteroBA', help='the backdoor method, backup: [HeteroBA, UGBA, CGBA]')
@@ -78,7 +76,7 @@ random_seed = args.random_seed
 
 def set_seed(random_seed):
     os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
-    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # 强制 GPU 操作同步执行
+    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  
     os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
     os.environ['OMP_NUM_THREADS'] = '1'
     os.environ['MKL_NUM_THREADS'] = '1'
@@ -140,7 +138,6 @@ def load_dataset(dataset_name):
         labels=deepcopy(labels),
         text_attribute=text_attribute,
         args=args,
-        # 其他参数作为kwargs传入
         hete_adjs=hete_adjs,
         features=features,
         num_classes=num_classes,
@@ -187,25 +184,12 @@ def save_trainset(random_seed, posion_trainset_index, posion_testset_index, accu
 
 
 def save_experiment_results(args, CAD, ASR, accuracy, stealthiness_score, save_dir="experiment_results"):
-    """
-    保存实验结果到文本文件中。
 
-    参数:
-        args: 参数对象，包含实验配置
-        CAD: Clean Accuracy Drop
-        ASR: Attack Success Rate
-        accuracy: 模型准确率
-        save_dir: 保存结果的目录路径
-    """
-    # 确保保存目录存在
     os.makedirs(save_dir, exist_ok=True)
 
-    # 构建文件名，包含关键参数
     filepath = os.path.join(save_dir, "experiment_results_CK.txt")
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    # 格式化时间戳
 
-    # 构建要写入的内容
     content = f""" {"=" * 50}
     Timestamp: {timestamp}
 
@@ -228,7 +212,6 @@ def save_experiment_results(args, CAD, ASR, accuracy, stealthiness_score, save_d
     
     """
 
-    # 写入文件
     with open(filepath, 'a') as f:
         f.write(content)
 
@@ -251,41 +234,10 @@ if __name__ == '__main__':
                               metapaths, trainset_index, validation_set_index, testset_index)
     victim_clean_model.train_victim_model()
     poison_test_hg = backdoor_model.construct_posion_graph(training=False)
-    # ======================================================Claculate Stealthiness Score=============================================
     stealthiness_score, details = calculate_stealthiness_score(hg, poison_test_hg, args.trigger_type, clean_labels,
                                                       clean_trainset_index + clean_testset_index, args.target_class,
                                                       args.backdoor_type, posion_testset_index, primary_type)
-    # print("stalthiness score is ", stealthiness_score)
-    # ====================================================================End========================================================
-
     CAD, ASR, accuracy = evaluation(model_name, victim_backdoor_model, victim_clean_model, posion_testset_index, clean_testset_index,
                poison_labels, clean_labels, poison_test_hg, hg, primary_type, testset_index)
-    #======================================debug info================================
-    # save_trainset(random_seed, posion_trainset_index, posion_testset_index, accuracy, CAD, ASR)
+
     save_experiment_results(args, CAD, ASR, accuracy, stealthiness_score)
-    # ======================================debug info================================
-
-
-''' ACM-author as trigger
--------------------class = 2---------------------------
-                   CAD            ASR     
-HGT                0.0215        0.9950
-SimpleHGN          0.0099        1.0000
-HAN                0.0017        1.0000
-
-DBLP-paper as trigger
--------------------class = 2---------------------------
-                   CAD            ASR     
-HGT                0.0230        0.9950
-SimpleHGN          0.0036        1.0000
-HAN                0.0099        1.0000
-
-
-IMDB-actor as trigger
--------------------class = 2---------------------------
-                   CAD            ASR     
-HGT                0.0218        0.5140
-SimpleHGN          0.0033        0.6963
-HAN                0.0062        0.5093
-
-'''
